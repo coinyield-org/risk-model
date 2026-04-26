@@ -1,6 +1,6 @@
 # CoinYield Risk Model
 
-### https://coinyield.org
+### https://www.coinyield.org/risk-graph
 
 `coinyield-risk-model` is the source-of-truth repository for CoinYield's curated DeFi
 risk model.
