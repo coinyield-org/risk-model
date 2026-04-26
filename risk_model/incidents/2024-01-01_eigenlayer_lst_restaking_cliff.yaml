@@ -1,0 +1,29 @@
+id: incident:2024-01-01_eigenlayer_lst_restaking_cliff
+title: "EigenLayer LST Restaking TVL Cliff Risk (Ongoing)"
+date: 2024-01-01
+event_type: liquidation
+amount_lost_usd: 0
+near_miss: true
+affected_protocols:
+  - eigenlayer
+  - kelp
+  - renzo
+  - etherfi
+affected_assets:
+  - rsETH
+  - ezETH
+  - weETH
+chains:
+  - ethereum
+root_cause_entity: ""
+cascade_targets: []
+risk_ids:
+  - restaking_protocol_dep
+  - validator_slashing_erosion
+  - validator_avs_slashing
+  - withdrawal_queue_delay
+source_urls:
+  - https://eigenlayer.mirror.xyz/jCLmCsgkFtRSe3bwgkMwM4LhIpCJZsz5dVXezXnKWi8
+  - https://blockworks.co/news/eigenlayer-risks-avs-slashing
+confidence: medium
+notes: "Billions of dollars in LSTs were deposited into EigenLayer and liquid restaking protocols to farm points with no real AVS slashing conditions active; when AVS go live and slashing becomes enforceable, depositors face sudden activation of tail-risk slashing on capital that was treated as risk-free parking. This is a systemic near-miss: the risk has not yet materialized but the structural conditions for a large slashing cascade are in place."

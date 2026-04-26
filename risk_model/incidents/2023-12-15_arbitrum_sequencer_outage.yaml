@@ -1,0 +1,25 @@
+id: incident:2023-12-15_arbitrum_sequencer_outage
+title: "Arbitrum Sequencer Outage — Stale Oracle Near-Miss"
+date: 2023-12-15
+event_type: oracle_failure
+amount_lost_usd: 0
+near_miss: true
+affected_protocols:
+  - aave_v3
+  - arbitrum_bridge
+affected_assets: []
+chains:
+  - arbitrum
+root_cause_entity: "Offchain Labs"
+cascade_targets: []
+risk_ids:
+  - sequencer_downtime
+  - sequencer_centralization
+  - oracle_staleness
+  - sequencer_uptime_feed_missing
+  - l2_sequencer_dep
+source_urls:
+  - https://twitter.com/ArbitrumStatus/status/1735350461204947348
+  - https://thedefiant.io/arbitrum-sequencer-down-december-2023
+confidence: high
+notes: "Arbitrum's sequencer went offline for approximately 1.5 hours, during which Chainlink oracle price feeds continued serving the last recorded prices. Protocols that had not integrated the Chainlink L2 sequencer uptime feed were exposed to potential price-staleness exploits; Aave's sequencer guard prevented exploitation in this instance, making this a confirmed near-miss."

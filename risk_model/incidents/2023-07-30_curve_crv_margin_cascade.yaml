@@ -1,0 +1,30 @@
+id: incident:2023-07-30_curve_crv_margin_cascade
+title: "Curve Vyper Exploit — CRV Founder Margin Cascade"
+date: 2023-07-30
+event_type: cascade
+amount_lost_usd: 70000000
+near_miss: false
+affected_protocols:
+  - aave_v3
+  - frax
+  - morpho
+affected_assets:
+  - CRV
+chains:
+  - ethereum
+root_cause_entity: "Curve Finance / Michael Egorov"
+cascade_targets:
+  - aave_v3
+  - frax
+  - morpho
+risk_ids:
+  - thin_liquidity_source_manipulation
+  - systemic_reflexivity
+  - bad_debt_accumulation
+  - illiquid_collateral_liquidation
+source_urls:
+  - https://rekt.news/curve-vyper-rekt/
+  - https://thedefiant.io/curve-hack-crv-lending-risk
+  - https://blockworks.co/news/curve-founder-loans-aave-frax-morpho-at-risk
+confidence: high
+notes: "Smart contract exploit is out of scope. In scope: the subsequent CRV founder margin cascade — the public knowledge of Michael Egorov's large on-chain CRV-collateral lending positions (across Aave, Frax, Morpho) combined with CRV's thin secondary market liquidity enabled coordinated short-selling to suppress the CRV price and trigger near-liquidation of these positions, threatening ~$70M in bad debt across multiple protocols."

@@ -1,0 +1,61 @@
+# Attack Pattern: Withdrawal Queue Blocking
+# LST/LRT-specific. Exploits the delay between on-chain pricing and real redemption capacity.
+
+version: 0.1
+category: lst_lrt
+
+patterns:
+
+  - id: withdrawal_queue_blocking_lst
+    name: Withdrawal queue blocking (LST/LRT)
+    observed: false
+    theoretical_basis: >
+      stETH has an on-chain withdrawal queue with Ethereum validator exit
+      rate-limit (~1800 validators/day). Under stress the queue stretches to weeks.
+      In this window arb via redeem is unavailable, market depeg persists longer.
+    hops: 5
+    risk_ids:
+      - withdrawal_queue_delay
+      - exchange_rate_vs_market_depeg
+      - lst_lrt_depeg
+      - quoted_vs_underlying_depeg
+    steps:
+      - step: 1
+        actor: attacker
+        action: >
+          Accumulate a large LST package (e.g., stETH/rsETH). Initiate
+          withdrawal of such volume that the validator exit queue is clogged for
+          5-10 days. This is a single transaction — withdraw requires no permissions.
+      - step: 2
+        actor: market
+        action: >
+          The arb mechanism (burn→redeem→ETH) is blocked by the queue. LST market
+          price starts trading at a discount to exchange rate, since
+          the exit path is costly and slow.
+      - step: 3
+        actor: attacker
+        action: >
+          Open a short on LST via perp or via another lending-market.
+          Depeg has already started — short is in profit.
+      - step: 4
+        actor: lending_protocol
+        action: >
+          Aave / Morpho use exchange-rate oracle for LST (not
+          market price). They value collateral "at par" — borrowers
+          can take borrow against overvalued collateral.
+      - step: 5
+        actor: attacker
+        action: >
+          Through a separate address: max borrow against own LST collateral,
+          while the oracle has not caught the market depeg. Then do not repay the debt
+          (or go into bad debt). Realized profit = difference between
+          exchange-rate valuation and real market price.
+    preconditions:
+      - LST listed as collateral with exchange-rate oracle (not market price)
+      - Sufficient volume to capture a significant part of validator exit queue
+      - Lending protocol has no market-price fallback under queue-stress
+    defense:
+      - Dual-oracle: min(exchange_rate, market_price) when divergence > threshold
+      - Supply cap on LST markets limits max exposure
+      - Rate-limit withdrawal request size on-chain (protocol-level)
+      - Monitoring: queue depth as on-chain signal for LTV reduction

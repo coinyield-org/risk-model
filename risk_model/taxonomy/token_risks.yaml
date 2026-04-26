@@ -1,0 +1,502 @@
+# Token Risk Taxonomy
+# Scope: risks of the asset itself — backing, peg, redemption, mechanics, composability.
+# Protocol = actor, token = object; the object has its own risk profile.
+#
+# Out of scope:
+#   - code_bugs:           auditor domain
+#   - regulatory:          policy, not DeFi mechanics
+#   - crypto_primitives:   hashes, signatures, quantum threat
+#   - end_user_errors:     phishing at the level of a specific user's signature
+
+version: 0.1
+scope: token
+applies_to:
+  - native              # ETH, MATIC
+  - fiat_stablecoin     # USDC, USDT, FDUSD
+  - cdp_stablecoin      # DAI, crvUSD, GHO, LUSD
+  - wrapped             # WBTC, renBTC
+  - lst                 # stETH, rETH, cbETH
+  - lrt                 # rsETH, ezETH, weETH
+  - yield_trading       # Pendle PT, YT
+  - position_token      # aToken, cToken
+  - lp_token            # UniV2 pair, Curve LP
+  - synthetic           # sUSD, sETH
+  - rwa                 # ONDO, USDY, BUIDL
+  - governance          # AAVE, UNI, CRV
+  - bridged             # USDC.e, USDC via LayerZero
+
+categories:
+
+  - id: issuer_authority
+    name: Issuer authority (legitimate issuer powers)
+    description: Powers embedded in the token contract and used by the issuer; the risk arises from the mere existence of these powers.
+    applies_to: [fiat_stablecoin, wrapped, rwa, bridged, cdp_stablecoin, synthetic]
+    risks:
+      - id: minter_authority
+        name: Minter authority
+        description: Issuer can mint arbitrarily — supply integrity depends on its process.
+      - id: blacklist_function
+        name: Blacklist / freeze function
+        description: USDC/USDT can freeze an address — positions, including collateral in protocols, are blocked.
+      - id: pause_function
+        name: Pause function
+        description: Global halt of transfers at the contract level.
+      - id: upgrade_authority
+        name: Upgrade authority (upgradable proxy)
+        description: Most fiat stables are upgradable. The owner can change any logic.
+      - id: fee_switch_authority
+        name: Fee switch authority
+        description: Ability to enable fee-on-transfer / redemption fee.
+      - id: supply_cap_authority
+        name: Supply cap authority
+        description: Control over maximum emission; absence of a cap = unbounded risk.
+      - id: recovery_function
+        name: Recovery / seize function
+        description: Issuer can take tokens from an address (some RWAs / rare stables).
+
+  - id: issuer_key_compromise
+    name: Issuer key compromise
+    description: Leak of keys controlling the listed authorities.
+    applies_to: [fiat_stablecoin, wrapped, rwa, bridged, cdp_stablecoin]
+    risks:
+      - id: minter_key_leak
+        name: Minter key compromise
+        description: Unlimited unauthorized mint.
+      - id: upgrade_deployer_key_leak
+        name: Upgrade deployer compromise
+        description: Replacement of implementation with arbitrary logic.
+      - id: freeze_admin_key_leak
+        name: Freeze admin compromise
+        description: Mass freezing of legitimate addresses.
+      - id: custodian_signer_leak
+        name: Custodian signer compromise (WBTC/BUIDL)
+        description: Off-chain custodian loses control over the backing reserve.
+
+  - id: backing
+    name: Backing / reserve
+    description: Integrity and quality of the token's backing.
+    applies_to: [fiat_stablecoin, wrapped, cdp_stablecoin, rwa, bridged, synthetic, lst, lrt]
+    risks:
+      - id: offchain_custodian_risk
+        name: Off-chain custodian risk
+        description: Bank / custodian holds the reserve (USDC/SVB March'23 pattern).
+      - id: reserve_composition_drift
+        name: Reserve composition drift
+        description: Reserve composition deteriorates over time (share of commercial paper, debts, illiquid assets grows).
+      - id: attestation_vs_audit_gap
+        name: Attestation vs audit gap
+        description: Monthly attestation ≠ full audit — historically Tether pattern of distrust.
+      - id: rwa_counterparty_default
+        name: RWA counterparty default
+        description: Off-chain issuer fails to honor its obligations.
+      - id: overcollateral_ratio_erosion
+        name: Over-collateral ratio erosion
+        description: Collateral price falls faster than the mechanism reacts.
+      - id: undercollateralization_via_bad_debt
+        name: Under-collateralization through bad debt
+        description: Bad debt accumulates → actual backing < issued supply.
+      - id: reserve_concentration
+        name: Reserve concentration
+        description: Entire backing in one asset / one bank / one chain.
+      - id: bridge_lock_backing_loss
+        name: Loss of backing in a bridged token
+        description: L1 lock contract is emptied / bypassed (LayerZero/rsETH incident pattern).
+      - id: validator_slashing_erosion
+        name: Slashing erosion (LST/LRT)
+        description: LST backing decreases upon validator slashing.
+      - id: avs_slashing_erosion
+        name: AVS slashing erosion (LRT)
+        description: Additional restaking slashing surface.
+
+  - id: peg_mechanism
+    name: Peg mechanism
+    description: Mechanism for holding the target price / exchange rate.
+    applies_to: [fiat_stablecoin, cdp_stablecoin, wrapped, bridged, lst, lrt, synthetic]
+    risks:
+      - id: hard_peg_redemption_window_closed
+        name: Closure of redemption window (hard peg)
+        description: Fiat redemption unavailable to retail / size-limited / halted — the arb mechanism is lost.
+      - id: soft_peg_algo_failure
+        name: Algorithmic peg failure
+        description: Algorithmic stabilization breaks under stress (UST pattern).
+      - id: exchange_rate_vs_market_depeg
+        name: Exchange-rate vs market depeg
+        description: LST/LRT has a clear exchange rate to underlying, but the market price diverges (withdrawal queue + forced selling).
+      - id: wrapped_custodian_risk
+        name: Peg of wrapped token to custodian
+        description: WBTC depends on BitGo; their incident = immediate depeg.
+      - id: bridged_to_canonical_peg
+        name: Peg of bridged to canonical
+        description: USDC.e is backed by the bridge contract; its problem = depeg.
+      - id: peg_defender_capital_insufficient
+        name: Insufficient peg-defender capital
+        description: Insurance/treasury defending the peg is smaller than the shock.
+      - id: psm_facilitator_imbalance
+        name: PSM / facilitator imbalance
+        description: One liquidity source is drained, mechanism limps along (DAI/USDC PSM, GHO facilitators).
+
+  - id: redemption_path
+    name: Redemption / exit path
+    description: Exit path from the token back into underlying.
+    applies_to: [fiat_stablecoin, cdp_stablecoin, wrapped, lst, lrt, rwa, bridged, yield_trading]
+    risks:
+      - id: fiat_ramp_gating
+        name: Fiat ramp gating
+        description: KYC, business hours, minimum size — retail cannot exit (only whales).
+      - id: onchain_burn_delay
+        name: On-chain burn delay
+        description: Lido/Kelp withdrawal queue — days under stress.
+      - id: validator_exit_queue
+        name: Validator exit queue
+        description: Validators cannot exit quickly under mass withdraw (Ethereum protocol-level cap).
+      - id: rwa_business_hours
+        name: RWA business hours
+        description: Off-chain redemption only during jurisdiction's business hours.
+      - id: wrapped_unwrap_dependency
+        name: Wrapped unwrap dependency
+        description: Custodian must cooperate; refusal = unredeemable token.
+      - id: redemption_pause
+        name: Redemption pause
+        description: Issuer halts redeem (legitimate pause or under pressure).
+      - id: cross_chain_redemption_split
+        name: Cross-chain redemption split
+        description: Token can be redeemed only on one chain; bridged copies get stuck.
+
+  - id: contract_mechanics
+    name: Contract mechanics (intentional, not a code bug)
+    description: Intentionally embedded mechanics that create risk for downstream integrations.
+    applies_to: [fiat_stablecoin, lst, wrapped, cdp_stablecoin, lrt]
+    risks:
+      - id: rebasing_semantics
+        name: Rebasing semantics
+        description: stETH changes the holder's balance — downstream protocols assuming static balance break.
+      - id: fee_on_transfer
+        name: Fee-on-transfer
+        description: Part of the amount is deducted on transfer — breaks accounting for integrators.
+      - id: transfer_hook_callback
+        name: Transfer hook / callback
+        description: ERC-777/1363 — callback to the recipient opens a reentrancy surface for consumers.
+      - id: permit_nonstandard
+        name: Non-standard permit
+        description: EIP-2612 implemented non-standardly (USDT has no permit at all; DAI — its own format).
+      - id: nonstandard_decimals
+        name: Non-standard decimals
+        description: USDT/USDC = 6, WBTC = 8 — integrator errors during normalization.
+      - id: tax_mechanics
+        name: Tax mechanics
+        description: Part of transfer goes to treasury/burn — effective fee-on-transfer.
+      - id: deflationary_burn
+        name: Deflationary burn
+        description: Supply shifts underfoot — usage in AMM/Lending produces drift.
+      - id: transfer_restriction_list
+        name: Transfer whitelist / restriction list
+        description: Some RWA tokens are transferable only to whitelisted addresses.
+
+  - id: price_discovery
+    name: Price discovery / oracle angle
+    description: Where the token's price comes from and how it is distorted.
+    applies_to: [fiat_stablecoin, lst, lrt, wrapped, cdp_stablecoin, bridged, synthetic, rwa, governance, lp_token, yield_trading]
+    risks:
+      - id: thin_source_manipulation
+        name: Thin source manipulation
+        description: Price is formed on a single venue with manipulable depth.
+      - id: spot_vs_exchange_rate_choice
+        name: Spot vs exchange-rate choice
+        description: Consumer chose the wrong pricing model (market price for LST under stress vs exchange rate).
+      - id: single_venue_price_concentration
+        name: Price discovery concentration on single venue
+        description: 80%+ of volume on one CEX/DEX — its incident = loss of feed.
+      - id: cex_delisting_dex_only
+        name: CEX delisting → DEX-only pricing
+        description: Switching to DEX-only price sharply increases manipulability.
+      - id: oracle_coverage_absence
+        name: Oracle coverage absence
+        description: No formal oracle (Chainlink does not cover) — consumers are forced to use DEX TWAP.
+      - id: oracle_feed_deprecation_for_token
+        name: Deprecation of oracle feed for the asset
+        description: Provider stops support — downstream protocols are forced to migrate.
+
+  - id: liquidity
+    name: Liquidity
+    description: Depth and resilience of the token's secondary market.
+    applies_to: [fiat_stablecoin, lst, lrt, wrapped, cdp_stablecoin, governance, rwa, yield_trading, lp_token, bridged, synthetic]
+    risks:
+      - id: concentrated_pool_dependency
+        name: Concentrated pool dependency
+        description: Main liquidity in one Curve/Uni pool — its emptying = loss of depth (3pool pattern for frax).
+      - id: cex_mm_withdrawal
+        name: CEX MM withdrawal
+        description: Market maker pulls quotes under stress.
+      - id: buy_sell_depth_asymmetry
+        name: Buy/sell depth asymmetry
+        description: Selling is several times more expensive than buying (or vice versa) — actual slippage is hidden.
+      - id: lp_pullout
+        name: LP pullout
+        description: LPs leave at the first sign of stress, accelerating movement.
+      - id: new_market_illiquidity
+        name: New-market illiquidity window
+        description: A just-listed token — thin market, early integrators under disproportionate risk.
+      - id: incentive_mercenary_tvl
+        name: Mercenary TVL via emissions
+        description: Liquidity rests on emissions; their end = immediate exit.
+
+  - id: supply_integrity
+    name: Supply integrity
+    description: Correspondence of circulating supply to the documented emission logic.
+    applies_to: [fiat_stablecoin, wrapped, bridged, rwa, governance, cdp_stablecoin, synthetic]
+    risks:
+      - id: unauthorized_mint
+        name: Unauthorized mint
+        description: Hack of the issuer or minter key creates unbacked supply.
+      - id: stealth_mint_via_upgrade
+        name: Stealth mint via upgrade
+        description: Upgradeable contract gains a new emission branch through a legitimate upgrade.
+      - id: cross_chain_supply_double_count
+        name: Cross-chain supply double-counting
+        description: Bridged copies + canonical simultaneously in circulation without a single source of truth.
+      - id: supply_accounting_drift
+        name: Supply accounting drift
+        description: Mismatch of totalSupply with actual circulation due to nonstandard transfer/burn.
+
+  - id: underlying_dependency
+    name: Underlying dependency chain
+    description: What this token depends on; graph depth = surface.
+    applies_to: [lst, lrt, wrapped, bridged, synthetic, yield_trading, lp_token, position_token, cdp_stablecoin]
+    risks:
+      - id: lst_validator_chain_dep
+        name: LST → validators + chain liveness
+        description: Ethereum consensus + validator set.
+      - id: lrt_restaking_chain_dep
+        name: LRT → LST + EigenLayer + AVSs
+        description: 4-level dependency with its own slashing surface at each level.
+      - id: bridged_bridge_dep
+        name: Bridged → bridge contract + canonical
+        description: Bridge infra risk is inherited fully.
+      - id: wrapped_custodian_dep
+        name: Wrapped → custodian + underlying chain
+        description: Off-chain custodian + liveness of the base chain (BTC for WBTC).
+      - id: synthetic_debt_pool_dep
+        name: Synthetic → debt pool + oracle + governance
+        description: The synthetic lives as long as the entire mechanism lives.
+      - id: lp_token_pool_dep
+        name: LP token → constituent pool + DEX contract
+        description: Depeg of any constituent + impermanent loss + DEX contract risk.
+      - id: yield_trading_underlying_dep
+        name: YT/PT → underlying yield source
+        description: Pendle PT/YT — the entire underlying yield asset chain inside.
+      - id: position_token_protocol_dep
+        name: Position token → protocol dep
+        description: aToken = 1:1 Aave risk; cToken = 1:1 Compound.
+
+  - id: cross_chain_duplication
+    name: Cross-chain duplication
+    description: One "token" — multiple on-chain entities with different risks.
+    applies_to: [fiat_stablecoin, bridged, lst, lrt, governance, wrapped]
+    risks:
+      - id: canonical_vs_bridged_coexistence
+        name: Canonical vs bridged coexistence
+        description: USDC and USDC.e, stETH and bridged stETH — one UI entity, different contracts and backing.
+      - id: multiple_bridged_versions
+        name: Multiple bridged versions
+        description: Several copies are simultaneously listed through different bridges, each with its own backing.
+      - id: oft_vs_native_deploy
+        name: OFT vs native deploy
+        description: LayerZero OFT and native deploy compete for liquidity.
+      - id: per_deployment_profile_divergence
+        name: Per-deployment risk divergence
+        description: Same name — different risk on L1/L2; the user does not distinguish.
+      - id: bridge_pause_isolates_liquidity
+        name: Bridge pause isolates liquidity
+        description: Bridge pause leaves liquidity on one side and cuts off arb.
+
+  - id: composability_role
+    name: Composability role (usage of the token by the external world)
+    description: Token is an object in other protocols; their behavior affects it.
+    applies_to: [fiat_stablecoin, lst, lrt, wrapped, cdp_stablecoin, governance, yield_trading, lp_token, position_token, rwa, synthetic, bridged]
+    risks:
+      - id: collateral_in_multiple_protocols
+        name: Collateral across multiple protocols
+        description: Their mass liquidations = forced selling of this token.
+      - id: lp_pair_in_many_pools
+        name: LP pair in many pools
+        description: Emptying of these pools = collapse of depth.
+      - id: included_in_indices
+        name: Inclusion in indices / structured products
+        description: Index rebalancing creates predictable flow that is exploited against the token.
+      - id: leveraged_strategy_usage
+        name: Usage in leveraged strategies
+        description: Gearbox / Pendle / perp basis — strategy unwinds = cascade of sell pressure.
+      - id: flash_loanability
+        name: Flash-loanability
+        description: Large available flash-loan liquidity opens a cheap attack vector against fixed positions.
+      - id: pair_token_correlation
+        name: Pair-token correlation break
+        description: In e-mode / correlation pools — correlation break = forced arb/liquidation.
+
+  - id: counterparty
+    name: Counterparty (off-chain)
+    description: Legal entities and operators behind the token.
+    applies_to: [fiat_stablecoin, wrapped, rwa, lst, lrt, bridged]
+    risks:
+      - id: issuer_corporate_risk
+        name: Issuer corporate risk
+        description: Bankruptcy / sanctions / management corporate stability (Circle, Tether).
+      - id: custodian_risk
+        name: Custodian risk
+        description: BitGo / Prime Trust / Sygnum — their incident = token risk.
+      - id: rwa_sponsor_risk
+        name: RWA sponsor risk
+        description: Ondo, BlackRock BUIDL — trust in the sponsor's processes.
+      - id: validator_operator_risk
+        name: Validator operator risk (LST)
+        description: Lido node operator set — concentration + slashing discipline.
+      - id: avs_operator_risk
+        name: AVS operator risk (LRT)
+        description: Set of AVSs the restake operator selected — each's independent surface.
+      - id: auditor_attestor_reliability
+        name: Auditor / attestor reliability
+        description: History of the attestation firm (Tether: several auditor changes, previously without Big Four).
+
+  - id: issuer_operational
+    name: Issuer operational
+    description: Off-chain issuer processes that affect token availability.
+    applies_to: [fiat_stablecoin, rwa, wrapped, cdp_stablecoin]
+    risks:
+      - id: mint_infra_downtime
+        name: Mint infra downtime
+        description: Unable to create new supply — peg holds via arb but does not grow.
+      - id: redeem_infra_downtime
+        name: Redeem infra downtime
+        description: Key break in the arb chain — peg falls apart.
+      - id: attestation_publishing_delay
+        name: Attestation publishing delay
+        description: Delay in publishing attestation → information asymmetry → FUD.
+      - id: kyc_bottleneck
+        name: KYC bottleneck
+        description: Retail does not pass KYC → redemption is available only to whales.
+
+  - id: supply_distribution
+    name: Supply distribution / concentration
+    description: Who holds, and what are the emission windows.
+    applies_to: [governance, fiat_stablecoin, rwa, yield_trading, lrt, lst]
+    risks:
+      - id: whale_concentration
+        name: Whale holder concentration
+        description: A single address can crash the price / cast a decisive vote.
+      - id: team_vc_unlocks
+        name: Team / VC unlocks (cliff)
+        description: Scheduled unlocks = predictable sell pressure.
+      - id: treasury_spending_authority
+        name: Treasury spending authority
+        description: Treasury control = potential distribution event.
+      - id: minter_concentration
+        name: Minter concentration
+        description: A single party with mint rights — single-point failure.
+
+  - id: governance_token_specific
+    name: Governance token specifics
+    description: Risks specific to governance tokens as an object.
+    applies_to: [governance]
+    risks:
+      - id: voting_power_concentration
+        name: Voting power concentration
+        description: Concentration of prevoting power in the hands of a few delegates.
+      - id: lockup_boost_mechanics
+        name: Lockup / boost mechanics
+        description: ve-models (veCRV) create an asymmetry of interests between long- and short-term holders.
+      - id: emission_schedule_change
+        name: Emission schedule change
+        description: Protocol changes the emission schedule — value dilution.
+      - id: treasury_authority_over_token
+        name: Treasury authority over its own token
+        description: DAO can re-issue / destroy / redistribute the token.
+
+  - id: market_reflexivity
+    name: Market reflexivity
+    description: Feedback loops between the token's price and its own mechanism.
+    applies_to: [cdp_stablecoin, synthetic, lst, lrt, governance, rwa]
+    risks:
+      - id: death_spiral
+        name: Death spiral
+        description: Debt-token price falls → issuer issues more governance → dilution → price lower (UST).
+      - id: depeg_feedback_loop
+        name: Depeg feedback loop
+        description: Depeg → withdrawal → less liquidity → worse depeg.
+      - id: forced_selling_from_collateral
+        name: Forced selling via collateral usage
+        description: Usage as collateral → cascading liquidations → pressure on spot.
+      - id: perp_spot_reflexivity
+        name: Perp ↔ spot reflexivity
+        description: Funding on perp creates arb flow pressuring spot.
+
+  - id: deprecation
+    name: Deprecation / extinction
+    description: End-of-life events of the token.
+    applies_to: [fiat_stablecoin, cdp_stablecoin, wrapped, bridged, lst, lrt, synthetic, governance]
+    risks:
+      - id: issuer_deprecates
+        name: Issuer deprecates
+        description: Sai→DAI, TerraUSD-classic — migration with a deadline.
+      - id: oracle_removal
+        name: Removal from oracle coverage
+        description: Chainlink removes the feed — protocols freeze the asset.
+      - id: venue_delisting
+        name: Venue delisting
+        description: Binance / Aave / Coinbase removes the token — loss of liquidity and visibility.
+      - id: migration_dual_token_confusion
+        name: Migration dual-token confusion
+        description: Simultaneous existence of old and new versions misleads integrators.
+
+  - id: social_narrative
+    name: Social / narrative
+    description: Information triggers that have no technical cause.
+    applies_to: [fiat_stablecoin, lst, lrt, rwa, cdp_stablecoin, governance, bridged, synthetic]
+    risks:
+      - id: trust_event_fud
+        name: Trust event / FUD wave
+        description: Tether-pattern information waves without confirmation of fact.
+      - id: whistleblower_leak
+        name: Whistleblower / leak
+        description: Internal leak about the issuer / custodian.
+      - id: public_incident_narrative_collapse
+        name: Public incident → narrative collapse
+        description: A single public error breaks the entire narrative of the project.
+      - id: coordinated_campaign
+        name: Coordinated campaign
+        description: Coordinated attack campaign by a competitor / short fund.
+
+  - id: cross_asset_correlation
+    name: Cross-asset correlation (as a portfolio object)
+    description: Joint behavior with other assets under stress.
+    applies_to: [fiat_stablecoin, lst, lrt, wrapped, rwa, cdp_stablecoin, synthetic, bridged]
+    risks:
+      - id: reserve_stable_correlation
+        name: Correlation with reserve stable
+        description: All DeFi is tied to USDC/USDT — their incident = contagion to all.
+      - id: lst_basket_correlation
+        name: LST basket correlation
+        description: stETH/rETH/cbETH depeg together under stress of validator economics.
+      - id: lrt_basket_correlation
+        name: LRT basket correlation
+        description: rsETH/ezETH/weETH through the shared EigenLayer layer.
+      - id: multi_protocol_stable_cofail
+        name: Multi-protocol stablecoin co-fail
+        description: Several stables through a shared PSM / reserve basket.
+
+  - id: integration_surface
+    name: Integration surface
+    description: Features that complicate safe downstream integration.
+    applies_to: [fiat_stablecoin, lst, lrt, wrapped, cdp_stablecoin, synthetic, yield_trading, rwa, bridged]
+    risks:
+      - id: whitelist_gated_access
+        name: Whitelist-gated access
+        description: Token is available only to whitelisted addresses — loss of status = loss of integration.
+      - id: nonstandard_events
+        name: Non-standard events
+        description: Indexers / keepers miss transactions — lag in accounting.
+      - id: eip4626_assumption_break
+        name: ERC-4626 assumption break
+        description: Vault token does not conform to ERC-4626 invariants (fee-on-mint, redeem via queue).
+      - id: balance_never_decreases_assumption_break
+        name: "Balance never decreases" assumption break
+        description: Rebasing / slashing violates the intuitive assumption, and downstream accounting breaks.

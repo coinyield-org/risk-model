@@ -1,0 +1,87 @@
+# Attack Patterns: Liquidation (Collusive)
+# Multi-step vectors involving manipulation of liquidation infrastructure.
+# Each pattern chains multiple atomic risks from protocol_risks.yaml.
+
+version: 0.1
+category: liquidation_collusive
+
+patterns:
+
+  - id: keeper_bad_debt_siphon
+    name: Keeper bad-debt siphon
+    observed: false
+    hops: 4
+    risk_ids:
+      - single_keeper_dependency
+      - bad_debt_socialization
+      - safety_module_slash_exposure
+    steps:
+      - step: 1
+        actor: dominant_liquidator
+        action: >
+          Become the dominant liquidation bot in the market. Reputation is built
+          over months: nearly all positions are closed honestly.
+      - step: 2
+        actor: dominant_liquidator
+        action: >
+          Open a large supplier position in the same protocol, preferably
+          through a separate address. Important: the socialization mechanism distributes
+          bad-debt proportionally across suppliers, while the insurance fund / safety module
+          covers the overflow.
+      - step: 3
+        actor: dominant_liquidator
+        action: >
+          Calculate the moment when liquidating position X is unprofitable (gas > bonus),
+          or deliberately fail tx with lower gas — the position goes into bad debt.
+          This is not a bug, but economically rational inaction.
+      - step: 4
+        actor: protocol
+        action: >
+          The protocol socializes bad debt: haircuts supplier share-value
+          or drains the safety module. The attacker-supplier wins
+          relative to other suppliers if their timing was correct.
+    preconditions:
+      - Socialization mechanism is known and predictable
+      - No competing keepers that catch the position earlier
+      - Single-keeper de-facto monopoly on the given asset
+    defense:
+      - Multiple independent keepers per market (competition)
+      - Liquidation insurance separate from supplier-share
+      - On-chain monitoring keeper failure rate per asset
+
+  - id: gas_ddos_liquidation
+    name: Gas DDoS under volatility
+    observed: true
+    observed_examples:
+      - "Congestion on Ethereum during March 2020 crash (MakerDAO $0 bids)"
+      - "General congestion-pattern during any major L1 crash"
+    hops: 3
+    risk_ids:
+      - block_gas_limit_mass_liquidation
+      - l2_fee_spike_unprofitable
+      - mempool_censorship_infra
+    steps:
+      - step: 1
+        actor: attacker
+        action: >
+          Predict a volatility window (large unlock, macro event, weekly candle close).
+          On L1 or L2 prepare a set of garbage-tx with high gas priorities.
+      - step: 2
+        actor: attacker
+        action: >
+          At the moment price drop starts: clog blocks with garbage-tx. Competitors'
+          liquidation tx do not land in blocks — positions continue to deepen.
+      - step: 3
+        actor: attacker
+        action: >
+          After several blocks, when the price has dropped maximally and positions are deeply
+          underwater, submit your own liquidation-tx with super-high priority.
+          Liquidation bonus is maximal at this moment.
+    preconditions:
+      - Predictable volatility window
+      - L2 without priority-fee protection for liquidations
+      - No off-chain keeper relay, bypassing public mempool
+    defense:
+      - Off-chain / MEV relay for liquidation bots
+      - Sequencer priority for liquidation-tx (Arbitrum Nitro type)
+      - Circuit-breaker pause under extreme volatility

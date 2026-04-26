@@ -1,0 +1,24 @@
+id: incident:2023-03-13_euler_bad_debt_socialization
+title: "Euler Finance Bad Debt Socialization"
+date: 2023-03-13
+event_type: bad_debt
+amount_lost_usd: 197000000
+near_miss: false
+affected_protocols: []
+affected_assets:
+  - USDC
+  - WSTETH
+  - WBTC
+chains:
+  - ethereum
+root_cause_entity: ""
+cascade_targets: []
+risk_ids:
+  - bad_debt_socialization
+  - undercollateralization_via_bad_debt
+  - utilization_full_bank_run
+source_urls:
+  - https://euler.finance/blog/euler-attack
+  - https://rekt.news/euler-rekt/
+confidence: high
+notes: "Smart contract exploit is out of scope. In scope: the resulting $197M bad debt socialization event and bank run on Euler liquidity pools — when the exploit was discovered, all supplier pools became undercollateralized simultaneously, triggering a mass withdrawal run that caused realized losses to be socialized across remaining liquidity providers before the attacker eventually returned most funds."

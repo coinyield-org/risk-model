@@ -1,0 +1,25 @@
+id: incident:2025-03-26_hyperliquid_jelly_incident
+title: "Hyperliquid JELLY HLP Bad Debt Incident"
+date: 2025-03-26
+event_type: bad_debt
+amount_lost_usd: 12000000
+near_miss: false
+affected_protocols:
+  - hyperliquid_hlp
+  - hyperliquid
+affected_assets:
+  - JELLY
+chains:
+  - hyperliquid_l1
+root_cause_entity: ""
+cascade_targets: []
+risk_ids:
+  - bad_debt_socialization
+  - whale_concentration
+  - governance_hostile_decision
+  - insurance_fund_depletion
+source_urls:
+  - https://thedefiant.io/hyperliquid-jelly-token-delisted-after-market-manipulation
+  - https://rekt.news/hyperliquid-jelly-rekt/
+confidence: high
+notes: "A trader opened a $430M long position on the illiquid JELLY token on Hyperliquid, then intentionally triggered their own liquidation; Hyperliquid's HLP vault was forced as the counterparty of last resort, accumulating a large losing position. The Hyperliquid core team intervened by delisting JELLY and setting an artificial settlement price, socializing ~$12M in losses and raising concerns about centralized governance override of market mechanics."

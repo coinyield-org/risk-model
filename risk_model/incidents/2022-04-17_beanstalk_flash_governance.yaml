@@ -1,0 +1,24 @@
+id: incident:2022-04-17_beanstalk_flash_governance
+title: "Beanstalk Farms Flash Loan Governance Attack"
+date: 2022-04-17
+event_type: governance
+amount_lost_usd: 182000000
+near_miss: false
+affected_protocols: []
+affected_assets:
+  - BEAN
+  - USDC
+  - ETH
+chains:
+  - ethereum
+root_cause_entity: ""
+cascade_targets: []
+risk_ids:
+  - flash_governance
+  - hostile_proposal_via_delegation
+  - governance_timelock_vs_attack_speed
+source_urls:
+  - https://rekt.news/beanstalk-rekt/
+  - https://bean.money/blog/beanstalk-governance-exploit
+confidence: high
+notes: "Attacker used a flash loan to borrow enough governance tokens (Stalk) to achieve a supermajority in a single block, then executed a pre-staged malicious proposal that drained the protocol treasury in the same transaction. Beanstalk's governance used spot token balances with no time-lock or time-weighted averaging, making it trivially vulnerable to flash-loan-powered hostile takeover."

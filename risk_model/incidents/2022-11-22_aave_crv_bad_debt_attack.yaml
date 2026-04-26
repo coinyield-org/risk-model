@@ -1,0 +1,25 @@
+id: incident:2022-11-22_aave_crv_bad_debt_attack
+title: "Aave V2 CRV Market Manipulation — Avi Eisenberg"
+date: 2022-11-22
+event_type: bad_debt
+amount_lost_usd: 1600000
+near_miss: false
+affected_protocols:
+  - aave_v3
+affected_assets:
+  - CRV
+chains:
+  - ethereum
+root_cause_entity: "Avi Eisenberg"
+cascade_targets: []
+risk_ids:
+  - thin_liquidity_source_manipulation
+  - systemic_reflexivity
+  - bad_debt_accumulation
+  - emergency_action_conflict
+  - governance_hostile_decision
+source_urls:
+  - https://governance.aave.com/t/arc-risk-parameter-updates-for-crv-on-aave-v2-2022-11-22/10657
+  - https://rekt.news/aave-crv-attack/
+confidence: high
+notes: "Avi Eisenberg (previously responsible for the Mango Markets exploit) borrowed large amounts of CRV on Aave V2 and short-sold them to suppress the CRV price below liquidation thresholds, deliberately attempting to create bad debt in the Aave CRV market. The Aave community passed an emergency governance vote to freeze the CRV market; ~$1.6M in bad debt materialized before the position was unwound, highlighting the conflict between emergency speed and governance process."

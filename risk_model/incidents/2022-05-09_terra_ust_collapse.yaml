@@ -1,0 +1,27 @@
+id: incident:2022-05-09_terra_ust_collapse
+title: "Terra / UST Algorithmic Stablecoin Collapse"
+date: 2022-05-09
+event_type: depeg
+amount_lost_usd: 40000000000
+near_miss: false
+affected_protocols: []
+affected_assets:
+  - UST
+  - LUNA
+chains: []
+root_cause_entity: "Terraform Labs"
+cascade_targets:
+  - lido
+  - aave_v3
+  - compound_v3
+risk_ids:
+  - soft_peg_algo_failure
+  - death_spiral
+  - depeg_feedback_loop
+  - contagion_bank_run
+  - self_fulfilling_depeg
+source_urls:
+  - https://www.nansen.ai/research/on-chain-forensics-demystifying-terrausd-depeg
+  - https://cryptobriefing.com/terra-luna-death-spiral-how-ust-lost-its-dollar-peg/
+confidence: high
+notes: "Coordinated large-scale redemptions of UST overwhelmed the LUNA mint/burn arbitrage mechanism, triggering a death spiral where UST depeg drove LUNA hyperinflation, which further eroded confidence in UST backing. The $40B collapse caused severe contagion to Celsius, Three Arrows Capital, and multiple lending protocols that held LUNA/UST as collateral."

@@ -1,0 +1,25 @@
+id: incident:2020-03-12_makerdao_black_thursday
+title: "MakerDAO Black Thursday"
+date: 2020-03-12
+event_type: liquidation
+amount_lost_usd: 8000000
+near_miss: false
+affected_protocols:
+  - sky_lending
+affected_assets:
+  - DAI
+  - ETH
+chains:
+  - ethereum
+root_cause_entity: ""
+cascade_targets: []
+risk_ids:
+  - gas_ddos_liquidation
+  - block_gas_limit_mass_liquidation
+  - liquidation_bonus_too_small
+  - bad_debt_socialization
+source_urls:
+  - https://medium.com/makerdao/the-market-collapse-of-march-12-2020-how-it-impacted-makerdao-9de2f0b3a28b
+  - https://blog.makerdao.com/the-market-collapse-of-march-12-2020-how-it-impacted-makerdao/
+confidence: high
+notes: "Ethereum gas congestion on Black Thursday prevented liquidation keepers from running. MakerDAO Vault auctions cleared at $0 bids because no keeper could front-run the mempool, creating ~$8M in protocol bad debt that was subsequently covered by MKR dilution via emergency governance action."

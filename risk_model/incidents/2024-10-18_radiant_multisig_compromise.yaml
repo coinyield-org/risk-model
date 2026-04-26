@@ -1,0 +1,25 @@
+id: incident:2024-10-18_radiant_multisig_compromise
+title: "Radiant Capital Multisig Hardware Wallet Compromise"
+date: 2024-10-18
+event_type: exploit
+amount_lost_usd: 55000000
+near_miss: false
+affected_protocols: []
+affected_assets:
+  - USDC
+  - WBNB
+  - ETH
+chains:
+  - bnb
+  - arbitrum
+root_cause_entity: "Radiant Capital"
+cascade_targets: []
+risk_ids:
+  - governance_signer_key_leak
+  - proxy_upgrade_authority
+  - deployer_key_leak
+source_urls:
+  - https://rekt.news/radiant-capital-rekt2/
+  - https://medium.com/@RadiantCapital/radiant-post-mortem-october-18-2024-feaf8095a0c5
+confidence: high
+notes: "Malware on the devices of three Radiant Capital multisig signers intercepted and replaced legitimate transaction signatures, allowing the attacker to satisfy the 3-of-11 threshold and push malicious smart contract upgrades across both BSC and Arbitrum deployments. The attacker then drained $55M through the upgraded contracts, demonstrating that proxy upgrade authority combined with compromised endpoint security can bypass multisig threshold guarantees."

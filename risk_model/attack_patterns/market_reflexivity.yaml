@@ -1,0 +1,197 @@
+# Attack Patterns: Market Reflexivity
+# Vectors that exploit feedback loops between price, protocol mechanics, and collateral.
+
+version: 0.1
+category: market_reflexivity
+
+patterns:
+
+  - id: deleveraging_telegraph_frontrun
+    name: Deleveraging telegraph front-run
+    observed: true
+    observed_examples:
+      - "MakerDAO liquidation spiral 2020 (predictable auction thresholds)"
+      - "General pattern: any public liquidation threshold creates a frontrun target"
+    hops: 3
+    risk_ids:
+      - systemic_reflexivity
+      - utilization_full_bank_run
+      - thin_liquidity_source_manipulation
+    steps:
+      - step: 1
+        actor: attacker
+        action: >
+          Study public protocol mechanics: at what price does mass liquidation
+          trigger? Parameters are known on-chain (LTV, liq_threshold, supply_cap,
+          current positions). Calculate the "cascade price" — the level from which
+          self-accelerating liquidation begins.
+      - step: 2
+        actor: attacker
+        action: >
+          Open a large short on the target asset (via perp or borrow+sell).
+          Push the price to the cascade threshold — a thin market
+          in off-hours is often enough. The first liquidation triggers the next ones, mechanics
+          are self-reinforcing.
+      - step: 3
+        actor: attacker
+        action: >
+          Take profit from the short while liquidations push the price further.
+          Optionally: buy back the asset at the bottom (liquidation bonus positions)
+          and close position on the rebound.
+    preconditions:
+      - Publicly known liquidation levels + actual size of open positions
+      - Sufficient short-capital for initial price push
+      - Thin liquidity on target asset
+    defense:
+      - Partial liquidations (not all collateral at once)
+      - Private / varied liquidation thresholds (impractical)
+      - Circuit-breaker when velocity > X% per block
+      - Diversified oracle sources (hard to push all simultaneously)
+
+  - id: forced_selling_cascade_collateral
+    name: Forced selling cascade via multi-protocol collateral
+    observed: true
+    observed_examples:
+      - "CRV / Curve founder margin positions 2023 — when his positions in Aave/Frax/etc became known"
+      - "General pattern: public positions of large holders in lending → target"
+    hops: 4
+    risk_ids:
+      - collateral_in_multiple_protocols
+      - systemic_reflexivity
+      - thin_liquidity_source_manipulation
+      - liquidation_bonus_too_large
+    steps:
+      - step: 1
+        actor: attacker
+        action: >
+          Identify a token that is collateral in N protocols
+          (Aave, Morpho, Euler, Frax) simultaneously. Study on-chain positions:
+          who holds large leveraged positions with this token.
+      - step: 2
+        actor: attacker
+        action: >
+          Open a short. Start selling the token on spot: a small initial
+          move triggers liquidation in the first protocol (where LTV is tighter).
+          The liquidator sells collateral → price falls further.
+      - step: 3
+        actor: market
+        action: >
+          Cascade: liquidation in protocol 1 pushes price → triggers liquidation
+          in protocol 2 → pushes more → protocol 3. Each liquidation
+          adds sell pressure. Speed is proportional to liquidation bonus
+          (the larger the bonus, the more aggressive the liquidators).
+      - step: 4
+        actor: attacker
+        action: >
+          Close the short at the local minimum. Optionally: if the token
+          is a governance token — buy at the bottom and obtain
+          governance influence at a cheap price.
+    preconditions:
+      - Token is collateral in 3+ protocols with different liquidation thresholds
+      - Large publicly visible positions
+      - Thin enough market for initial push
+    defense:
+      - Coordination between protocols on supply cap of shared collateral
+      - Monitoring on-chain concentration exposure
+      - Circuit-breaker on cascade detection
+
+  - id: perp_basis_death_spiral
+    name: Perp-basis death spiral (Ethena-pattern)
+    observed: false
+    theoretical_basis: >
+      Ethena USDe backed by delta-neutral position: long spot ETH + short perp ETH.
+      Yield = funding rate. Under negative funding (bearish market) yield disappears
+      or becomes negative — backing erodes.
+    hops: 5
+    risk_ids:
+      - perp_funding_feedback
+      - perp_spot_reflexivity
+      - self_fulfilling_depeg
+      - depeg_feedback_loop
+      - death_spiral
+    steps:
+      - step: 1
+        actor: attacker
+        action: >
+          Take a large short on the perp market (high leverage). This creates
+          pressure on funding rate — it becomes negative (shorts pay longs).
+          Ethena-style protocol gets negative yield.
+      - step: 2
+        actor: market
+        action: >
+          Negative yield → protocol APY falls, holders start to redeem/exit.
+          TVL declines → protocol needs to close part of the perp position.
+          Closing short on perp = buy-back, which pushes perp price up —
+          funding becomes even more negative for remaining positions.
+      - step: 3
+        actor: market
+        action: >
+          Cascade redemptions. Each redeem forces closing a perp position,
+          which worsens funding, which triggers the next redeem.
+      - step: 4
+        actor: market
+        action: >
+          Spot-side: closing perp short = buy perp, sell spot hedge. Spot
+          downward pressure presses asset price, which additionally worsens perp basis.
+      - step: 5
+        actor: attacker
+        action: >
+          Close the short on perp at funding minimum. Profit = funding payments
+          received, plus spot short if opened in parallel.
+    preconditions:
+      - Protocol with perp-basis backing (Ethena USDe or analog)
+      - Sufficient capital for sustained funding manipulation
+      - Redemption without lockup / with short queue
+    defense:
+      - Funding rate floor (pause redemption under extreme negative funding)
+      - Reserve fund covers X days of negative yield
+      - Diversified delta-neutral strategies (not only perp)
+      - Lockup under high volatility regime
+
+  - id: emode_correlation_engineering
+    name: E-mode correlation break engineering
+    observed: false
+    theoretical_basis: >
+      E-mode allows LTV up to 93% for "correlated" pairs (wstETH-ETH).
+      If correlation breaks (stETH depeg 2022 pattern), mass
+      liquidations in e-mode happen at prices where the normal mode
+      is still safe.
+    hops: 4
+    risk_ids:
+      - emode_correlation_break
+      - withdrawal_queue_delay
+      - exchange_rate_vs_market_depeg
+      - block_gas_limit_mass_liquidation
+    steps:
+      - step: 1
+        actor: attacker
+        action: >
+          Open a short on one side of the e-mode pair (stETH via perp).
+          In parallel, initiate a massive withdrawal via Lido (for stETH),
+          clogging the validator exit queue for several days.
+      - step: 2
+        actor: market
+        action: >
+          stETH market price starts trading at a discount to ETH,
+          since arb via redeem is blocked by the queue. The
+          stETH-ETH correlation breaks — exactly what e-mode assumes impossible.
+      - step: 3
+        actor: protocol
+        action: >
+          E-mode positions wstETH/stETH-ETH start liquidating.
+          LTV 93% → liquidation threshold 95% — margin is negligible.
+          Thousands of positions simultaneously → block gas limit cannot cope.
+      - step: 4
+        actor: attacker
+        action: >
+          Short closes at the local minimum. Additionally:
+          the liquidator takes liquidation bonus on mass positions.
+    preconditions:
+      - LST listed in e-mode with high LTV
+      - Exchange-rate oracle (not market price)
+      - Large volume of e-mode positions open in the protocol
+    defense:
+      - Dual-oracle with fallback to min(exchange_rate, market_price)
+      - E-mode supply cap limits max exposure
+      - Dynamic LTV reduction when queue depth > threshold
+      - Rate-limit on validator withdrawal requests

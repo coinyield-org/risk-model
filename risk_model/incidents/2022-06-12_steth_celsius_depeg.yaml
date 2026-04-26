@@ -1,0 +1,27 @@
+id: incident:2022-06-12_steth_celsius_depeg
+title: "stETH Secondary Market Depeg — Celsius Crisis"
+date: 2022-06-12
+event_type: depeg
+amount_lost_usd: 0
+near_miss: true
+affected_protocols:
+  - lido
+  - curve
+affected_assets:
+  - stETH
+  - wstETH
+chains:
+  - ethereum
+root_cause_entity: "Celsius Network"
+cascade_targets: []
+risk_ids:
+  - exchange_rate_vs_market_depeg
+  - withdrawal_queue_delay
+  - utilization_full_bank_run
+  - self_fulfilling_depeg
+  - concentrated_pool_dependency
+source_urls:
+  - https://blockworks.co/news/how-the-steth-depeg-affects-the-whole-market
+  - https://thedefiant.io/celsius-steth-depeg-crisis
+confidence: high
+notes: "Celsius, the largest stETH holder, faced a liquidity crisis and was forced to sell stETH on secondary markets. Because Lido withdrawals were not yet available (pre-Shanghai upgrade), the only exit was the Curve stETH/ETH pool, which became severely imbalanced; stETH traded as low as 0.94 ETH. The peg eventually recovered after Ethereum's Shanghai upgrade enabled withdrawals."

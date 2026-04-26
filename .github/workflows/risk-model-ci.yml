@@ -1,0 +1,47 @@
+name: risk-model-ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate-risk-model:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python deps
+        run: pip install pyyaml
+
+      - name: Rebuild generated Cypher
+        run: python3 risk_model/neo4j/import_risk_model.py
+
+      - name: Ensure generated graph is committed
+        run: git diff --exit-code -- risk_model/neo4j/generated/risk_model.cypher
+
+      - name: Start Neo4j
+        run: docker compose up -d neo4j
+
+      - name: Import graph
+        run: bash risk_model/neo4j/load_generated.sh risk_model/neo4j/generated/risk_model.cypher
+
+      - name: Run CI integrity checks
+        run: bash risk_model/neo4j/ci_assert.sh
+
+      - name: Write full diagnostic report
+        run: docker compose exec -T neo4j cypher-shell -u neo4j -p password < risk_model/neo4j/checks.cypher > neo4j-check-report.txt
+
+      - name: Upload diagnostic report
+        uses: actions/upload-artifact@v4
+        with:
+          name: neo4j-check-report
+          path: neo4j-check-report.txt

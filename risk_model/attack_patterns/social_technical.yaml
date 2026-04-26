@@ -1,0 +1,135 @@
+# Attack Patterns: Social-Technical
+# Vectors that combine off-chain manipulation with on-chain execution.
+
+version: 0.1
+category: social_technical
+
+patterns:
+
+  - id: permit_phishing_pool_drain
+    name: Permit phishing → pool drain (bulk)
+    observed: true
+    observed_examples:
+      - "Angel Drainer / Inferno Drainer campaigns 2023-2024 — mass permit drain"
+      - "Numerous fake airdrop sites collecting permit signatures"
+    hops: 4
+    risk_ids:
+      - frontend_js_injection
+      - wallet_supply_chain
+      - delegate_social_engineering
+      - permit_nonstandard
+    steps:
+      - step: 1
+        actor: attacker
+        action: >
+          Launch a fake site (airdrop / claim / galxe-campaign).
+          The user receives a request to sign permit() — visually
+          indistinguishable from a standard approve. The signature does not require on-chain tx.
+      - step: 2
+        actor: attacker
+        action: >
+          Accumulate permit signatures over days/weeks. Each signature is nonce-bound
+          and action-bound, but expiration is often = maxUint256 (unlimited).
+      - step: 3
+        actor: attacker
+        action: >
+          At one moment send batch-tx: transferFrom() across all accumulated
+          permits to own address. One EOA — thousands of victims per block.
+      - step: 4
+        actor: attacker
+        action: >
+          Funds passed through the protocol if tokens were in Aave/Morpho position:
+          permit → transferFrom → deposit-withdraw in the same block via flash-loan
+          for liquidity. The protocol is not at fault, but users lose funds,
+          stuck in the support queue.
+    preconditions:
+      - Token supports EIP-2612 permit
+      - No frontend warning on permit signing
+      - User does not notice the difference between approve and permit
+    defense:
+      - Wallet-side: clear UI warning on permit (MetaMask already does)
+      - Protocol: permit revoke UI (revoke.cash pattern)
+      - Token design: permit with default expiration ≤ 24h
+
+  - id: shared_signer_cross_dao_cascade
+    name: Shared signer cross-DAO cascade
+    observed: true
+    observed_examples:
+      - >
+        Not a single incident, but a systemic vulnerability: it is publicly known
+        that a number of core contributors sit in 3-5 multisigs of different protocols.
+    hops: 3
+    risk_ids:
+      - governance_signer_key_leak
+      - guardian_key_leak
+      - l2_executor_divergence
+    steps:
+      - step: 1
+        actor: attacker
+        action: >
+          Identify a person who is a signer in N multisigs
+          of different protocols. This is public information (governance docs, Etherscan
+          Safe ownership). Conduct a targeted attack: SIM-swap, phishing
+          on personal email, or physical compromise of device.
+      - step: 2
+        actor: attacker
+        action: >
+          One key = access to N parallel exploits. Especially valuable if
+          the person is a shared delegate (not just signer) in multiple DAOs.
+      - step: 3
+        actor: attacker
+        action: >
+          In parallel initiate malicious proposals / transactions on
+          all N protocols simultaneously, creating a simultaneous crisis
+          and overloading the ecosystem's security response capacity.
+    preconditions:
+      - Publicly known signer identity (Etherscan, github, twitter)
+      - Overlap of multisig compositions between protocols
+      - Absence of hardware signer on each multisig independently
+    defense:
+      - Mandatory rotation: each multisig has unique signers
+      - Anonymization of signer identity while preserving accountability
+      - Hardware wallets on each multisig separately
+      - Separation: protocol multisig key ≠ personal key
+
+  - id: retroactive_airdrop_tvl_farming
+    name: Retroactive airdrop TVL inflation
+    observed: true
+    observed_examples:
+      - "Eigenlayer points farming loops 2023-2024"
+      - "Numerous loop-deposit strategies before LayerZero, ZkSync, etc. snapshots"
+    hops: 3
+    risk_ids:
+      - protocol_token_self_ref
+      - incentive_end_liquidity_flight
+    steps:
+      - step: 1
+        actor: attacker
+        action: >
+          Identify approaching snapshot (official announcement,
+          or prediction by pattern: X months after launch without airdrop).
+          The calculation formula is known from docs — TVL or transaction-count based.
+      - step: 2
+        actor: attacker
+        action: >
+          Create a loop: deposit in A → receive aToken → deposit aToken in B
+          → receive bToken → deposit bToken in A. Each hop is counted as
+          independent TVL in different protocols. Real capital 1x,
+          counted TVL = 5x-10x.
+      - step: 3
+        actor: attacker
+        action: >
+          After snapshot: unwind loop in reverse order, take the airdrop.
+          Protocol TVL instantly collapses by the amount of inflated loop-TVL.
+    preconditions:
+      - Protocol counts TVL without de-duplication of loop positions
+      - Airdrop formula is publicly known or predictable
+      - No lockup between snapshot and airdrop claim
+    impact_on_protocol:
+      - Distorted TVL metrics → incorrect assessment of real adoption
+      - Mercenary TVL = cliff drop after airdrop
+      - Token distribution goes to loop farmers, not to real users
+    defense:
+      - TVL de-duplication (do not count recursive loop-TVL)
+      - Lockup or vesting after airdrop
+      - Do not announce snapshot in advance / multiple hidden snapshots

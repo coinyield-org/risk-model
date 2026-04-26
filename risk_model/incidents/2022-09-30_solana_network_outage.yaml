@@ -1,0 +1,23 @@
+id: incident:2022-09-30_solana_network_outage
+title: "Solana Network Outage — DeFi Freeze"
+date: 2022-09-30
+event_type: oracle_failure
+amount_lost_usd: 0
+near_miss: true
+affected_protocols:
+  - kamino
+  - jupiter_lend
+affected_assets: []
+chains:
+  - solana
+root_cause_entity: "Solana Labs / Solana Foundation"
+cascade_targets: []
+risk_ids:
+  - chain_halt
+  - sequencer_downtime
+  - oracle_staleness
+source_urls:
+  - https://solana.com/news/9-30-2022-solana-mainnet-beta-outage-report
+  - https://blockworks.co/news/solana-network-halt-september-2022
+confidence: high
+notes: "Solana mainnet halted for approximately 8 hours due to a consensus instability bug triggered by a misconfigured validator; all Solana DeFi protocols including lending markets and perpetuals were frozen. On chain restart, oracle feeds served stale pre-halt prices until they could resynchronize, briefly exposing lending protocols to mispriced collateral."

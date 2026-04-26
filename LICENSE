@@ -1,0 +1,66 @@
+CoinYield Data Licensing
+
+Copyright (c) 2026 CoinYield
+
+This repository uses a split-license model.
+
+1. Content / curated data / documentation
+----------------------------------------
+
+Unless otherwise noted, the repository's curated content is licensed under the
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+license ("CC BY-NC-SA 4.0").
+
+This includes, for example:
+
+- Markdown and YAML files under `risk_model/`
+- taxonomy definitions
+- incident annotations
+- risk mappings
+- repository-authored documentation such as `README.md` and `CONTRIBUTING.md`
+- repository-authored metadata files such as `MANIFEST.md`
+- generated artifacts that are derived primarily from the curated model content,
+  including `risk_model/neo4j/generated/risk_model.cypher`
+
+License notice:
+
+This work is licensed under the Creative Commons Attribution-NonCommercial-
+ShareAlike 4.0 International License. To view a copy of this license, visit:
+
+https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+2. Tooling / scripts / repository infrastructure
+------------------------------------------------
+
+Unless otherwise noted, the repository's tooling and infrastructure code is
+licensed under the PolyForm Noncommercial License 1.0.0.
+
+This includes, for example:
+
+- Python scripts
+- shell scripts
+- `Makefile`
+- `docker-compose.yml`
+- GitHub Actions workflows
+- repository-authored Neo4j helper queries and checks, except generated content
+  covered by Section 1
+
+Required Notice: Copyright (c) 2026 CoinYield
+
+To view the full license text, visit:
+
+https://polyformproject.org/licenses/noncommercial/1.0.0/
+
+3. Third-party materials
+------------------------
+
+Third-party materials are excluded from the repository licenses unless
+explicitly stated otherwise.
+
+Examples include:
+
+- third-party audit PDFs
+- externally authored reports
+- mirrored source materials
+
+See `LICENSES.md` for more detail.

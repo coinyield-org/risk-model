@@ -1,0 +1,33 @@
+id: incident:2023-03-10_usdc_svb_depeg
+title: "USDC Depeg — Silicon Valley Bank Closure"
+date: 2023-03-10
+event_type: depeg
+amount_lost_usd: 0
+near_miss: true
+affected_protocols:
+  - curve
+  - aave_v3
+  - compound_v3
+  - sparklend
+affected_assets:
+  - USDC
+  - DAI
+chains:
+  - ethereum
+  - arbitrum
+  - polygon
+  - optimism
+  - base
+root_cause_entity: "Circle / Silicon Valley Bank"
+cascade_targets: []
+risk_ids:
+  - stablecoin_depeg
+  - offchain_custodian_risk
+  - reserve_concentration
+  - self_fulfilling_depeg
+  - contagion_bank_run
+source_urls:
+  - https://www.circle.com/blog/an-update-on-usdc-and-silicon-valley-bank
+  - https://thedefiant.io/usdc-depeg-svb-crisis
+confidence: high
+notes: "Circle disclosed $3.3B of USDC reserves held at Silicon Valley Bank when the FDIC seized the institution; with redemptions suspended over the weekend, USDC depegged to $0.87 on secondary markets. The depeg propagated across DeFi via Curve 3pool imbalance and MakerDAO PSM drain; the peg fully recovered after the US government guaranteed all SVB deposits on Monday."

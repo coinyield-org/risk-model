@@ -1,0 +1,492 @@
+# Protocol Risk Taxonomy
+# Scope: operational, economic and cascading protocol risks.
+# Out of scope:
+#   - code_bugs:           auditor domain (we consume reports, not duplicate them)
+#   - regulatory:          policy, not DeFi mechanics
+#   - crypto_primitives:   hashes, signatures, quantum threat
+#   - end_user_errors:     phishing at the level of a specific user
+
+version: 0.1
+scope: protocol
+applies_to: [lending, cdp, dex, perps, yield_aggregator, lst, lrt, bridge, messaging, yield_trading, synthetic, rwa, nft_lending]
+
+categories:
+
+  - id: admin_governance
+    name: Admin / Governance (legitimate control)
+    description: Risks arising from legitimate authority, not from its compromise.
+    risks:
+      - id: governance_hostile_decision
+        name: Hostile governance decision
+        description: DAO / multisig makes a decision that harms a subset of users (parameter change, redistribution of funds).
+      - id: guardian_asymmetric_authority
+        name: Asymmetric authority in Guardian
+        description: Guardian can pause/freeze, but unpause only through the full governance cycle → prolonged freeze.
+      - id: risk_stewards_narrow_window
+        name: Risk Stewards in a narrow range
+        description: Limited but fast control over caps/LTV — an error cumulatively creates systemic risk.
+      - id: l2_executor_divergence
+        name: L2 Executor multisig
+        description: Separate cross-chain governance-signer on each L2 — different threshold and set of signers.
+      - id: proxy_upgrade_authority
+        name: Proxy upgrade authority
+        description: The owner of the proxy contract can replace the implementation and change behavior without audit.
+      - id: timelock_mismatch
+        name: Timelock mismatch
+        description: Timelock is too short for the attack speed or too long for the crisis speed.
+      - id: emergency_action_conflict
+        name: Emergency action conflict
+        description: Different bodies (Guardian, DAO, Risk Stewards) have overlapping/conflicting authority during a crisis.
+
+  - id: key_compromise
+    name: Key compromise
+    description: Leak/theft of private keys, formally separated from legitimate use of authority.
+    risks:
+      - id: governance_signer_key_leak
+        name: Governance signer compromise
+        description: Leak of the key of one of the multisig signers; at threshold N-1 — critical.
+      - id: guardian_key_leak
+        name: Guardian compromise
+        description: A single key with pause/freeze rights — a separate attack surface.
+      - id: oracle_operator_key_leak
+        name: Oracle node operator compromise
+        description: One of the Chainlink node operators forming the median price.
+      - id: keeper_bot_key_leak
+        name: Keeper/liquidation bot compromise
+        description: Key of the automation servicing liquidations/rebalance.
+      - id: validator_key_share_compromise
+        name: Validator key shares compromise
+        description: Threshold compromise of the operator set allows double-signing or slashing of validators.
+      - id: sequencer_operator_key_leak
+        name: L2 sequencer operator compromise
+        description: Upstream dependency: L2 sequencer single-key → affects all protocols on L2.
+      - id: deployer_key_leak
+        name: Deployer / upgrade EOA compromise
+        description: EOA with upgrade rights on a proxy (often remains without multisig).
+
+  - id: governance_attack
+    name: Attack through a legitimate governance channel
+    description: Abuse of the permitted process rather than its circumvention.
+    risks:
+      - id: hostile_proposal_via_delegation
+        name: Hostile proposal through delegation concentration
+        description: The attacker accumulates votes (by buying / delegation) and pushes through a malicious proposal.
+      - id: flash_governance
+        name: Flash governance
+        description: Temporary ownership of voting tokens (if the mechanism allows) to push through a proposal.
+      - id: vote_buying
+        name: Vote buying / bribe markets
+        description: Buying votes through bribe markets (Curve-wars pattern).
+      - id: proposal_griefing
+        name: Proposal spam / griefing
+        description: Clogging the timelock or voting queue, blocking urgent actions.
+      - id: low_turnout_capture
+        name: Low-turnout capture
+        description: Low turnout → a minority makes key decisions.
+      - id: delegate_single_point_failure
+        name: Delegate single-point-of-failure
+        description: One delegate concentrates a critical share of votes.
+
+  - id: oracle
+    name: Oracle
+    description: Risks in the price feed and its infrastructure.
+    risks:
+      - id: thin_liquidity_source_manipulation
+        name: Thin-liquidity source manipulation
+        description: Manipulation of a spot DEX or CEX feeding price into the oracle (Mango / Euler pattern).
+      - id: oracle_staleness
+        name: Staleness (heartbeat violated)
+        description: Feed is not updated — a stale price is served as current.
+      - id: deviation_threshold_too_wide
+        name: Deviation threshold too wide
+        description: Hidden price drift within allowed deviation without an on-chain update.
+      - id: quoted_vs_underlying_depeg
+        name: Quoted vs underlying depeg
+        description: Oracle shows the "correct" market price, but underlying backing has diverged from it (LRT/bridged case).
+      - id: sequencer_uptime_feed_missing
+        name: Missing/broken sequencer uptime feed
+        description: On L2 transactions are not blocked during sequencer downtime — stale prices are served as fresh.
+      - id: readonly_reentrancy
+        name: Read-only reentrancy
+        description: Temporarily incorrect state in the source contract (Curve read-only reentrancy'23).
+      - id: fallback_oracle_misconfig
+        name: Fallback oracle not configured / misconfigured
+        description: When primary fails — fallback is either absent or delivers an inadequate price.
+      - id: feed_deprecation_by_provider
+        name: Feed deprecation by provider
+        description: Chainlink / provider stops supporting the feed.
+      - id: aggregator_upgrade_by_provider
+        name: Aggregator upgrade by provider
+        description: Provider updates implementation — behavior changes under the consumer.
+      - id: quote_currency_mismatch
+        name: Quote currency mismatch
+        description: Protocol uses an ETH-quoted feed as USD (or vice versa).
+      - id: circuit_breaker_false_trigger
+        name: Circuit breaker false trigger
+        description: Protective trigger fires on legitimate movement, blocking the market.
+      - id: twap_window_misconfig
+        name: TWAP window too short/long
+        description: TWAP window does not match the asset's actual volatility.
+
+  - id: collateral_asset
+    name: Collateral asset
+    description: Risks in the asset itself accepted as collateral.
+    risks:
+      - id: stablecoin_depeg
+        name: Collateral stablecoin depeg
+        description: USDC/USDT/DAI losing peg (example: USDC March 2023, SVB).
+      - id: lst_lrt_depeg
+        name: LST/LRT depeg from ETH
+        description: Market price of LST/LRT diverges from exchange rate to ETH (stETH 2022, rsETH incident).
+      - id: bridged_backing_loss
+        name: Loss of backing in a bridged asset
+        description: L2 copy is not backed by an L1 lock (LayerZero/rsETH case).
+      - id: issuer_blacklist_function
+        name: Issuer blacklist function
+        description: USDC/USDT freeze — positions become unliquidatable.
+      - id: issuer_pause_function
+        name: Issuer pause function
+        description: Issuer stops transfers — the entire protocol segment hangs.
+      - id: fee_on_transfer_edge
+        name: Fee-on-transfer edge case
+        description: Asset deducts a fee on transfer — breaks accounting.
+      - id: rebasing_semantic_confusion
+        name: Rebasing vs wrapped semantics
+        description: stETH (rebasing) vs wstETH (static balance) — erroneous usage breaks balances.
+      - id: underlying_protocol_pause
+        name: Underlying protocol pause
+        description: Lido/Kelp/EigenLayer pauses — liquidations and redeem break.
+      - id: validator_avs_slashing
+        name: Validator / AVS slashing
+        description: Upstream slashing reduces LST/LRT backing.
+      - id: rwa_issuer_default
+        name: RWA issuer default
+        description: Off-chain party fails to honor obligations.
+      - id: token_upgrade_reissuance
+        name: Upgrade / re-issuance by issuer
+        description: Issuer changes token implementation — semantics drift.
+
+  - id: liquidation_mechanics
+    name: Liquidation mechanics
+    description: Infrastructure for closing positions.
+    risks:
+      - id: liquidation_bonus_too_small
+        name: Liquidation bonus too small
+        description: Liquidators do not show up — position rots into bad debt.
+      - id: liquidation_bonus_too_large
+        name: Liquidation bonus too large
+        description: On a volatile asset, liquidations accelerate bad debt more than they prevent it.
+      - id: close_factor_limits
+        name: Close factor limits
+        description: A position cannot be closed in a single tx — multiple waves are required during liquidator shortage.
+      - id: dust_positions_uneconomic
+        name: Dust positions
+        description: Gas costs more than the liquidation bonus — positions remain.
+      - id: single_keeper_dependency
+        name: Single keeper dependency
+        description: One bot de facto serves the market — its failure = no liquidations.
+      - id: liquidation_sandwich
+        name: Liquidation sandwich
+        description: MEV sandwich around a liquidation tx makes it unprofitable or increases bad debt.
+      - id: gas_wars_revert
+        name: Gas wars → revert
+        description: Competing liquidators try for the same slot — some txs revert, position is not closed.
+      - id: block_gas_limit_mass_liquidation
+        name: Block gas limit under mass liquidation
+        description: Cannot mass-liquidate in one block — the queue grows faster than execution.
+      - id: gas_ddos_liquidation
+        name: Liquidation gas DDoS
+        description: Attacker or congestion makes liquidation transactions too expensive or unreliable.
+      - id: illiquid_collateral_liquidation
+        name: Illiquid collateral liquidation
+        description: Collateral cannot be quickly sold at oracle price, so the liquidation auction does not cover the debt.
+      - id: l2_fee_spike_unprofitable
+        name: L2 blob/calldata fee spike
+        description: Tx cost on L2 > liquidation bonus — liquidation is economically unprofitable.
+      - id: mempool_censorship
+        name: Mempool / builder censorship
+        description: Private mempool or builder censors specific liquidation txs.
+
+  - id: market_liquidity
+    name: Market / liquidity
+    description: Market-level and utilization risks.
+    risks:
+      - id: utilization_full_bank_run
+        name: Utilization → 100% (bank run)
+        description: All available funds are borrowed, withdraw is blocked.
+      - id: bad_debt_socialization
+        name: Bad debt socialization
+        description: Losses are distributed to suppliers through insurance or through share depreciation.
+      - id: bad_debt_accumulation
+        name: Bad debt accumulation
+        description: Bad debt accumulates faster than reserve, insurance fund or governance can close it.
+      - id: insurance_fund_depletion
+        name: Insurance fund depletion
+        description: Insurance fund is depleted after a series of undercollateralized liquidations.
+      - id: tvl_concentration_single_strategy
+        name: TVL concentration in single strategy
+        description: Vault or protocol concentrates TVL in one strategy and itself becomes a market-moving participant.
+      - id: debt_pool_skew
+        name: Debt pool skew
+        description: Synthetic debt pool becomes skewed to one side and makes stakers an involuntary counterparty.
+      - id: lp_position_single_sided_trap
+        name: LP position single-sided trap
+        description: Concentrated LP position goes out of range and becomes 100% one asset with a sharp drop in collateral value.
+      - id: ir_curve_kink_miscalibration
+        name: IR curve kink miscalibration
+        description: Curve slope does not match actual demand volatility — either gouges or fails to react.
+      - id: variable_stable_rate_arb
+        name: Variable ↔ stable rate arbitrage
+        description: Migration between rates creates predictable arbitrage that drains reserves.
+      - id: supply_borrow_cap_mismatch
+        name: Supply/borrow cap vs actual liq depth
+        description: Caps are set higher than market liquidity depth for liquidation.
+      - id: isolation_mode_misconfig
+        name: Isolation mode misconfig
+        description: An asset should be isolated but is not — or vice versa.
+      - id: emode_correlation_break
+        name: E-mode correlation break
+        description: Assets in one category lose correlation — all are liquidated simultaneously.
+      - id: native_stablecoin_peg_stress
+        name: Peg mechanism stress (GHO / crvUSD / DAI)
+        description: Facilitator imbalance, PSM depletion, dependency on one collateral.
+      - id: safety_module_slash_exposure
+        name: Safety module slash exposure
+        description: stkAAVE / analog can be slashed to cover bad debt — risk for stakers.
+      - id: incentive_end_liquidity_flight
+        name: End of emissions → liquidity flight
+        description: Mercenary TVL leaves when rewards are reduced, exposing real product-market fit.
+
+  - id: external_dependencies
+    name: External dependencies (graph nodes)
+    description: Protocols/services from which the protocol consumes data or infrastructure.
+    risks:
+      - id: oracle_provider_dep
+        name: Oracle provider dependency
+        description: Chainlink / Pyth / Redstone — any event of theirs cascades into the protocol.
+      - id: l2_sequencer_dep
+        name: L2 sequencer dependency
+        description: Sequencer downtime / censorship directly affects all L2 deployments.
+      - id: bridge_dep
+        name: Bridge dependency
+        description: LayerZero / Wormhole / native L1→L2 — backing of bridged assets.
+      - id: staking_protocol_dep
+        name: Staking protocol dependency
+        description: Lido / Kelp / Etherfi / Renzo — LST/LRT backing.
+      - id: restaking_protocol_dep
+        name: Restaking protocol dependency
+        description: EigenLayer / Symbiotic — additional slashing surface under LRT.
+      - id: underlying_chain_dep
+        name: Underlying chain dependency
+        description: Ethereum / Arbitrum / Base — liveness, finality, censorship resistance of the chain itself.
+      - id: rpc_infra_dep
+        name: RPC infra dependency
+        description: Infura / Alchemy — liquidators and frontend go blind during an outage.
+      - id: builder_relay_dep
+        name: Builder / relay dependency
+        description: Centralization of block-builders and relays affects tx inclusion.
+      - id: operator_concentration
+        name: Operator concentration
+        description: A small number of operators control a substantial share of validator, AVS, keeper or staking surface.
+      - id: bridge_signing_committee
+        name: Bridge signing committee
+        description: Bridge security depends on a committee or validator threshold, not on a trust-minimized proof system.
+
+  - id: recursive_depth
+    name: Recursive dependency depth
+    description: Dependency graph depth > 2 levels — combinatorial growth of surface.
+    risks:
+      - id: deep_chain_lrt
+        name: rsETH → EigenLayer → validators → AVSs
+        description: 4 levels of dependencies, each with its own surface.
+      - id: deep_chain_yield_trading
+        name: Pendle PT → underlying yield source → ...
+        description: Derivative token depends on a chain of underlying.
+      - id: deep_chain_stablecoin
+        name: Stablecoin → bank → off-chain auditor
+        description: USDC → Circle → banking partners → attestation firm.
+      - id: protocol_token_self_ref
+        name: aToken in another protocol that lists Aave
+        description: Cyclic composition — under stress both amplify each other's movement.
+
+  - id: cross_protocol_cascade
+    name: Cross-protocol cascade (protocol as backbone)
+    description: Other protocols are built on it — their events push back.
+    risks:
+      - id: downstream_protocol_failure
+        name: Downstream protocol fails
+        description: Morpho / Spark / Gearbox over-Aave → their collapse triggers heavy withdraw.
+      - id: protocol_token_as_collateral_elsewhere
+        name: Position token as collateral in another protocol
+        description: Their liquidations create pressure on the underlying market.
+      - id: native_token_as_collateral_elsewhere
+        name: Native token (GHO, aToken) as collateral somewhere
+        description: Depeg returns through a feedback loop.
+      - id: adversarial_competitor
+        name: Adversarial competitor
+        description: Competitor provokes oracle manipulation, targeting specific listings.
+
+  - id: cross_chain
+    name: Cross-chain specifics
+    description: Risks arising from multi-deployments and cross-chain coordination.
+    risks:
+      - id: bridge_pause_censorship
+        name: Bridge pause / censorship
+        description: Bridge admin / multisig blocks flow.
+      - id: message_replay_ordering
+        name: Message replay / ordering violation
+        description: Cross-chain messaging delivers duplicates or out of order.
+      - id: canonical_vs_bridged_coexistence
+        name: Canonical vs bridged simultaneously
+        description: USDC and USDC.e in one market — different risk profiles under one ticker.
+      - id: per_deployment_divergence
+        name: Per-deployment divergence
+        description: Different parameters / oracles / collaterals on L1 vs L2 — each deployment = separate risk object.
+      - id: timelock_skew_cross_chain
+        name: Timelock skew L1 vs L2
+        description: Different timelocks create a window for an atomic cross-chain attack.
+
+  - id: infrastructure
+    name: Infrastructure (below smart contract)
+    description: Chain- and network-level risks.
+    risks:
+      - id: chain_reorg
+        name: Chain reorg
+        description: Especially relevant on L2 and PoS chains before finality.
+      - id: chain_halt
+        name: Chain halt / consensus failure
+        description: Chain stops producing blocks (Solana pattern).
+      - id: l2_finality_delay
+        name: L2 finality delay vs oracle update
+        description: Oracle updated but not finalized — rollback is possible.
+      - id: rpc_outage
+        name: RPC outage
+        description: Liquidators and keepers go blind, frontend is unavailable.
+      - id: mempool_censorship_infra
+        name: Mempool censorship
+        description: Network level, not builder.
+      - id: sequencer_downtime
+        name: Sequencer downtime
+        description: L2 sequencer is down — txs are not included.
+      - id: sequencer_centralization
+        name: Sequencer centralization
+        description: One sequencer or operator controls ordering, inclusion and liveness for the deployment.
+
+  - id: offchain_social_tech
+    name: Off-chain / socio-technical
+    description: Layers outside on-chain logic that affect users.
+    risks:
+      - id: frontend_dns_hijack
+        name: Frontend DNS hijack
+        description: Hijacking of the protocol's DNS domain.
+      - id: frontend_ipfs_gateway
+        name: IPFS gateway compromise
+        description: Frontend substitution via a compromised gateway.
+      - id: frontend_js_injection
+        name: JS injection / XSS on frontend
+        description: Malicious script signs tx on behalf of the user.
+      - id: wallet_supply_chain
+        name: Wallet supply chain
+        description: Malicious update of WalletConnect / MetaMask / extensions.
+      - id: governance_forum_manipulation
+        name: Governance forum / Discord manipulation
+        description: Discrediting/astroturfing to influence proposals.
+      - id: delegate_social_engineering
+        name: Social engineering of delegates / signers
+        description: Targeted attack on people, not on code.
+
+  - id: parameters
+    name: Parameters (misconfig as a separate vector)
+    description: Each parameter is an independent risk when it does not match reality.
+    risks:
+      - id: ltv_too_aggressive
+        name: LTV too aggressive
+        description: LTV higher than the asset's volatility allows.
+      - id: liq_threshold_too_narrow
+        name: Liquidation threshold too close to LTV
+        description: Small window between LTV and liq threshold → quickly falls under liquidation.
+      - id: supply_cap_mismatch
+        name: Supply cap vs actual liq depth
+        description: Already discussed — here as a parameter vector.
+      - id: borrow_cap_mismatch
+        name: Borrow cap mismatch
+        description: Borrow cap does not limit concentration for a specific asset.
+      - id: ir_curve_params
+        name: IR curve parameters
+        description: base / slope1 / slope2 / kink — miscalibrated for the regime.
+      - id: close_factor_param
+        name: Close factor
+        description: Share of a position closed in a single liquidation.
+      - id: liq_bonus_param
+        name: Liquidation bonus
+        description: Reward for the liquidator.
+      - id: emode_category
+        name: E-mode category assignment
+        description: Incorrect correlation category for the asset.
+      - id: isolation_mode_flag
+        name: Isolation mode flag
+        description: Should be enabled / disabled according to the asset profile.
+      - id: reserve_factor
+        name: Reserve factor
+        description: Share of interest that goes to treasury.
+      - id: debt_ceiling
+        name: Debt ceiling
+        description: Emission ceiling (for isolation or stablecoin facilitator).
+      - id: amplification_misconfig
+        name: Amplification parameter misconfig
+        description: StableSwap A parameter does not match peg volatility and makes the pool single-sided under stress.
+      - id: parameter_update_lag
+        name: Parameter update lag
+        description: Parameters are not updated to follow the asset's changed risk profile.
+
+  - id: temporal_reflexivity
+    name: Temporal / reflexivity
+    description: Risks related to time and market feedback loops.
+    risks:
+      - id: weekend_holiday_liquidity
+        name: Weekend / holiday thin liquidity
+        description: CEX MMs leave, DEX depth drops — depegs last longer.
+      - id: governance_timelock_vs_attack_speed
+        name: Timelock vs attack speed
+        description: Governance reaction is slower than the pace of the unfolding attack.
+      - id: oracle_heartbeat_vs_volatility
+        name: Heartbeat vs volatility
+        description: Heartbeat is longer than the characteristic time of price movement.
+      - id: withdrawal_queue_delay
+        name: Underlying withdrawal queue delay
+        description: Lido/Kelp withdraw takes days — depeg cannot be arbitraged.
+      - id: systemic_reflexivity
+        name: Systemic reflexivity
+        description: Protocol liquidations themselves move the asset's spot price (sufficient market share).
+      - id: self_fulfilling_depeg
+        name: Self-fulfilling depeg
+        description: Fear of depeg → withdraw → actual depeg.
+      - id: perp_funding_feedback
+        name: Perp funding feedback
+        description: Funding on derivative markets creates back-pressure on spot.
+      - id: harvest_sandwich
+        name: Harvest sandwich
+        description: Public harvest or compound causes a predictable share-price jump and allows extracting someone else's accrued yield.
+      - id: maturity_cliff_exploit
+        name: Maturity cliff exploit
+        description: PT or fixed-yield token has a predictable price discontinuity near maturity.
+      - id: liquidity_at_maturity
+        name: Liquidity cliff at maturity
+        description: After maturity, old liquidity leaves, and the new maturity does not yet have sufficient depth.
+
+  - id: social_coordination
+    name: Social / coordination
+    description: Risks that have no technical cause but are realized through user actions.
+    risks:
+      - id: contagion_bank_run
+        name: Contagion bank run
+        description: Failure of a neighboring protocol → panic → withdraw from here.
+      - id: whale_coordination
+        name: Whale coordination
+        description: Coordinated withdrawal by several large LPs.
+      - id: fud_campaign
+        name: FUD campaign
+        description: Coordinated information attack by a competitor.
+      - id: insider_asymmetry
+        name: Information asymmetry
+        description: Insider sees hostile proposal / incident before the market and acts first.
